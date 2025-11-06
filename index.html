@@ -167,19 +167,22 @@
 function save(arr){
   // メイン & バックアップに二重保存
   const json = JSON.stringify(arr);
-  localStorage.setItem(KEY, json);
-  localStorage.setItem(KEY + '_bak', json);
+  try {
+    localStorage.setItem(KEY, json);
+    localStorage.setItem(KEY + '_bak', json);
+  } catch(e) {
+    // iOSなどで保存エラーが出ても落ちないように
+    console.warn('保存エラー:', e);
+  }
+
   // トーストがある場合だけ優しく通知
   if (typeof showToast === 'function') {
     showToast('💾 保存＆バックアップ完了！');
   }
-  //
-render();
-}
-  function save(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); render(); }
-  function add(rec){ const arr = load(); arr.push(rec); save(arr); }
-  function del(idx){ const arr = load(); arr.splice(idx,1); save(arr); }
 
+  // ログ一覧を即時反映
+  render();
+}
   function render(){
     const arr = load();
     const tb = $("#tbl tbody"); tb.innerHTML='';
