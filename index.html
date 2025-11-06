@@ -173,6 +173,8 @@ function save(arr){
   if (typeof showToast === 'function') {
     showToast('💾 保存＆バックアップ完了！');
   }
+  //
+render();
 }
   function save(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); render(); }
   function add(rec){ const arr = load(); arr.push(rec); save(arr); }
