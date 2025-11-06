@@ -151,7 +151,29 @@
     x.fillText(hex.toUpperCase(),8,c.height-7);
     return c.toDataURL('image/png');
   }
-  function load(){ try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return []} }
+  function load(){
+  // メイン保存 → ダメならバックアップから復元
+  try {
+    const main = JSON.parse(localStorage.getItem(KEY));
+    if (Array.isArray(main)) return main;
+  } catch(e){}
+  try {
+    const bak = JSON.parse(localStorage.getItem(KEY + '_bak'));
+    if (Array.isArray(bak)) return bak;
+  } catch(e){}
+  return [];
+}
+
+function save(arr){
+  // メイン & バックアップに二重保存
+  const json = JSON.stringify(arr);
+  localStorage.setItem(KEY, json);
+  localStorage.setItem(KEY + '_bak', json);
+  // トーストがある場合だけ優しく通知
+  if (typeof showToast === 'function') {
+    showToast('💾 保存＆バックアップ完了！');
+  }
+}
   function save(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); render(); }
   function add(rec){ const arr = load(); arr.push(rec); save(arr); }
   function del(idx){ const arr = load(); arr.splice(idx,1); save(arr); }
