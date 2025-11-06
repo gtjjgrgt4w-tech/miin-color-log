@@ -26,15 +26,88 @@
   img.sw{width:38px;height:38px;border-radius:8px;border:1px solid rgba(255,255,255,.2);object-fit:cover;background:#000}
   .grid{display:grid;gap:10px;grid-template-columns:1fr}
   @media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+  // --- Mobile UX helpers ---
+(function(){
+  const toast = document.getElementById('toast');
+  const dockColor = document.getElementById('dockColor');
+  const colorCode = document.getElementById('colorCode');
+  const colorPick = document.querySelector('input[type="color"]');
+  const table = document.querySelector('table');
+
+  // ドックの現在色表示を連動
+  function syncDock() {
+    if (!dockColor) return;
+    dockColor.textContent = (colorCode?.value || colorPick?.value || '').toLowerCase();
+  }
+  colorCode && colorCode.addEventListener('input', syncDock);
+  colorPick && colorPick.addEventListener('input', syncDock);
+  syncDock();
+
+  // 既存の addLog をフックしてトースト＆スクロール
+  const orig = window.addLog;
+  if (typeof orig === 'function') {
+    window.addLog = function(){
+      const res = orig.apply(this, arguments);
+      // トースト
+      if (toast) {
+        toast.classList.add('show');
+        setTimeout(()=> toast.classList.remove('show'), 1200);
+      }
+      // テーブルへスクロール
+      if (table) {
+        table.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+      // ドック色も更新
+      syncDock();
+      return res;
+    }
+  }
+})();
 </style>
 </head>
 <body>
 <header><h1>🎨 MiiN Color Log v2（Edge/Chrome想定・スウォッチ保存）</h1></header>
+  <section id="guide" style="background:#111523;border:1px solid #22283a;border-radius:10px;padding:12px 16px;margin:14px 12px;">
+  <h2 style="font-size:16px;color:#e9ecf3;margin-top:0;">📱 スマホでの操作ガイド</h2>
+  <ul style="line-height:1.6;font-size:14px;color:#aeb6c7;padding-left:20px;">
+    <li>🎨 色をタップしてカラーピッカーを開く</li>
+    <li>📝 「誰の色」「場所」「ネーム」を入力して <b>ログに追加</b></li>
+    <li>💾 ログは自動保存されます（Safariでは時々リロード確認）</li>
+    <li>⬇️ JSON / CSV ボタンでバックアップ・共有も可能</li>
+    <li>🧭 下のバーから簡単操作できます（スマホ最適化済）</li>
+  </ul>
+</section>
 <main>
   <div class="card">
     <div id="env" class="small"></div>
   </div>
 
+  <!-- Dock Bar for Quick Actions -->
+<div class="dock">
+  <button id="addLogBtn">＋ ログ追加</button>
+  <button class="ghost" id="exportBtn">📤 エクスポート</button>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast">✅ 保存しました！</div>
+
+<script>
+  // トースト表示関数
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  // ダミーイベント
+  document.getElementById('addLogBtn').addEventListener('click', () => {
+    showToast('🎨 新しい色を追加しました！');
+  });
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    showToast('💾 CSVを書き出しました！');
+  });
+</script>
   <div class="card">
     <div class="row">
       <input id="color" type="color" value="#ff9fb3">
@@ -153,6 +226,26 @@
 
   render();
 })();
+  <!-- Toast Notification -->
+<div id="toast" class="toast">✅ 保存しました！</div>
+
+<script>
+  // トースト表示関数
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  // ダミーイベント
+  document.getElementById('addLogBtn').addEventListener('click', () => {
+    showToast('🎨 新しい色を追加しました！');
+  });
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    showToast('💾 CSVを書き出しました！');
+  });
 </script>
+
 </body>
 </html>
