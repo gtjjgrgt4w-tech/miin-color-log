@@ -4,19 +4,57 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MiiN Color Log v2 — swatch保存・JSON入出力対応</title>
+
 <style>
-  :root{--bg:#0e0f13;--panel:#151720;--ink:#e9ecf3;--mut:#aeb6c7;--line:rgba(255,255,255,.1);--accent:#ff86b2}
+  :root{
+    --bg:#0e0f13;
+    --panel:#151720;
+    --ink:#e9ecf3;
+    --mut:#aeb6c7;
+    --line:rgba(255,255,255,.1);
+    --accent:#ff86b2;
+  }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Segoe UI",Roboto,Arial,sans-serif;line-height:1.6}
-  header{position:sticky;top:0;padding:14px 16px;background:linear-gradient(180deg,rgba(21,23,32,.9),rgba(21,23,32,.7));backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:5}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Segoe UI",Roboto,Arial,sans-serif;
+    line-height:1.6;
+  }
+  header{
+    position:sticky;top:0;
+    padding:14px 16px;
+    background:linear-gradient(180deg,rgba(21,23,32,.9),rgba(21,23,32,.7));
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    z-index:5;
+  }
   h1{margin:0;font-size:18px}
   main{max-width:980px;margin:0 auto;padding:16px;display:grid;gap:14px}
   .card{background:#111523;border:1px solid var(--line);border-radius:14px;padding:14px}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   input[type="color"]{width:56px;height:40px;border:none;background:transparent}
-  input[type="text"],input[type="datetime-local"]{background:#0f141f;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#e9ecf3}
-  button{background:#3b82f6;border:none;color:#fff;padding:10px 14px;border-radius:10px;font-weight:700}
-  button.ghost{background:#1a2133;border:1px solid rgba(255,255,255,.16);color:#e9ecf3}
+  input[type="text"],input[type="datetime-local"]{
+    background:#0f141f;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;
+    padding:10px 12px;
+    color:#e9ecf3;
+  }
+  button{
+    background:#3b82f6;
+    border:none;
+    color:#fff;
+    padding:10px 14px;
+    border-radius:10px;
+    font-weight:700;
+  }
+  button.ghost{
+    background:#1a2133;
+    border:1px solid rgba(255,255,255,.16);
+    color:#e9ecf3;
+  }
   table{width:100%;border-collapse:collapse}
   th,td{border-bottom:1px solid rgba(255,255,255,.08);padding:8px 6px;font-size:14px;vertical-align:middle}
   .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#0f1526;border:1px solid rgba(255,255,255,.12);font-size:12px}
@@ -26,48 +64,47 @@
   img.sw{width:38px;height:38px;border-radius:8px;border:1px solid rgba(255,255,255,.2);object-fit:cover;background:#000}
   .grid{display:grid;gap:10px;grid-template-columns:1fr}
   @media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
-  // --- Mobile UX helpers ---
-(function(){
-  const toast = document.getElementById('toast');
-  const dockColor = document.getElementById('dockColor');
-  const colorCode = document.getElementById('colorCode');
-  const colorPick = document.querySelector('input[type="color"]');
-  const table = document.querySelector('table');
 
-  // ドックの現在色表示を連動
-  function syncDock() {
-    if (!dockColor) return;
-    dockColor.textContent = (colorCode?.value || colorPick?.value || '').toLowerCase();
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #19e28a;
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
   }
-  colorCode && colorCode.addEventListener('input', syncDock);
-  colorPick && colorPick.addEventListener('input', syncDock);
-  syncDock();
+  .toast.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
 
-  // 既存の addLog をフックしてトースト＆スクロール
-  const orig = window.addLog;
-  if (typeof orig === 'function') {
-    window.addLog = function(){
-      const res = orig.apply(this, arguments);
-      // トースト
-      if (toast) {
-        toast.classList.add('show');
-        setTimeout(()=> toast.classList.remove('show'), 1200);
-      }
-      // テーブルへスクロール
-      if (table) {
-        table.scrollIntoView({behavior:'smooth', block:'start'});
-      }
-      // ドック色も更新
-      syncDock();
-      return res;
-    }
+  /* Dock */
+  .dock {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(21,23,32,0.9);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    border-top: 1px solid var(--line);
   }
-})();
 </style>
 </head>
+
 <body>
 <header><h1>🎨 MiiN Color Log v2（Edge/Chrome想定・スウォッチ保存）</h1></header>
-  <section id="guide" style="background:#111523;border:1px solid #22283a;border-radius:10px;padding:12px 16px;margin:14px 12px;">
+
+<section id="guide" class="card" style="margin:14px 12px;">
   <h2 style="font-size:16px;color:#e9ecf3;margin-top:0;">📱 スマホでの操作ガイド</h2>
   <ul style="line-height:1.6;font-size:14px;color:#aeb6c7;padding-left:20px;">
     <li>🎨 色をタップしてカラーピッカーを開く</li>
@@ -77,37 +114,10 @@
     <li>🧭 下のバーから簡単操作できます（スマホ最適化済）</li>
   </ul>
 </section>
+
 <main>
-  <div class="card">
-    <div id="env" class="small"></div>
-  </div>
+  <div class="card"><div id="env" class="small"></div></div>
 
-  <!-- Dock Bar for Quick Actions -->
-<div class="dock">
-  <button id="addLogBtn">＋ ログ追加</button>
-  <button class="ghost" id="exportBtn">📤 エクスポート</button>
-</div>
-
-<!-- Toast Notification -->
-<div id="toast" class="toast">✅ 保存しました！</div>
-
-<script>
-  // トースト表示関数
-  function showToast(msg) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
-  }
-
-  // ダミーイベント
-  document.getElementById('addLogBtn').addEventListener('click', () => {
-    showToast('🎨 新しい色を追加しました！');
-  });
-  document.getElementById('exportBtn').addEventListener('click', () => {
-    showToast('💾 CSVを書き出しました！');
-  });
-</script>
   <div class="card">
     <div class="row">
       <input id="color" type="color" value="#ff9fb3">
@@ -136,10 +146,18 @@
   </div>
 </main>
 
+<div class="dock">
+  <button id="addLogBtn">＋ ログ追加</button>
+  <button class="ghost" id="exportBtn">📤 エクスポート</button>
+</div>
+
+<div id="toast" class="toast">✅ 保存しました！</div>
+
 <script>
 (function(){
   const KEY='miin_color_log_v2';
   const $=s=>document.querySelector(s);
+
   function makeSwatch(hex){
     const c=document.createElement('canvas');
     c.width=120; c.height=120;
@@ -151,44 +169,29 @@
     x.fillText(hex.toUpperCase(),8,c.height-7);
     return c.toDataURL('image/png');
   }
+
   function load(){
-  // メイン保存 → ダメならバックアップから復元
-  try {
-    const main = JSON.parse(localStorage.getItem(KEY));
-    if (Array.isArray(main)) return main;
-  } catch(e){}
-  try {
-    const bak = JSON.parse(localStorage.getItem(KEY + '_bak'));
-    if (Array.isArray(bak)) return bak;
-  } catch(e){}
-  return [];
-}
-
-function save(arr){
-  // メイン & バックアップに二重保存
-  const json = JSON.stringify(arr);
-  try {
-    localStorage.setItem(KEY, json);
-    localStorage.setItem(KEY + '_bak', json);
-  } catch(e) {
-    // iOSなどで保存エラーが出ても落ちないように
-    console.warn('保存エラー:', e);
+    try{ const main=JSON.parse(localStorage.getItem(KEY)); if(Array.isArray(main)) return main; }catch(e){}
+    try{ const bak=JSON.parse(localStorage.getItem(KEY+'_bak')); if(Array.isArray(bak)) return bak; }catch(e){}
+    return [];
   }
 
-  // トーストがある場合だけ優しく通知
-  if (typeof showToast === 'function') {
+  function save(arr){
+    const json=JSON.stringify(arr);
+    try{
+      localStorage.setItem(KEY,json);
+      localStorage.setItem(KEY+'_bak',json);
+    }catch(e){ console.warn('保存エラー:',e); }
     showToast('💾 保存＆バックアップ完了！');
+    render();
   }
 
-  // ログ一覧を即時反映
-  render();
-}
   function render(){
-    const arr = load();
-    const tb = $("#tbl tbody"); tb.innerHTML='';
+    const arr=load();
+    const tb=$("#tbl tbody"); tb.innerHTML='';
     arr.forEach((r,i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
         <td>${i+1}</td>
         <td>${r.dt||''}</td>
         <td>${r.who||''}</td>
@@ -196,83 +199,98 @@ function save(arr){
         <td><span class="pill" style="border-color:${r.hex}">${r.hex||''}</span><div class="small">${r.pname||''}</div></td>
         <td>${r.swatch?`<img class="sw" src="${r.swatch}" alt="swatch">`:''}</td>
         <td>${r.swatch?`<a href="${r.swatch}" download="miin_swatch_${i+1}.png">保存</a>`:''}</td>
-        <td><button data-del="${i}" class="ghost">削除</button></td>
-      `;
+        <td><button data-del="${i}" class="ghost">削除</button></td>`;
       tb.appendChild(tr);
     });
-    $("#count").textContent = `（${arr.length}件）`;
+    $("#count").textContent=`（${arr.length}件）`;
   }
 
-  const ua = navigator.userAgent;
-  const isEdge = /Edg\//.test(ua);
-  const isChrome = /Chrome\//.test(ua) && !isEdge;
-  const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-  let note = `Browser: ${isEdge?'Edge':isChrome?'Chrome':isSafari?'Safari':'Other'} ／ Storage: `;
-  let storageOK = true;
-  try{ localStorage.setItem('__chk','1'); localStorage.removeItem('__chk'); }
-  catch(e){ storageOK = false }
-  note += storageOK ? '<span class="ok">OK</span>' : '<span class="ng">NG</span>';
-  $("#env").innerHTML = note + '　<small class="small">（※iOSの「ファイルのプレビュー」経由ではNGのことがあります）</small>';
+  function add(rec){
+    const arr=load();
+    arr.push(rec);
+    save(arr);
+  }
+
+  function del(i){
+    const arr=load();
+    arr.splice(i,1);
+    save(arr);
+  }
+
+  function showToast(msg){
+    const toast=document.getElementById('toast');
+    toast.textContent=msg;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),1500);
+  }
 
   $("#color").addEventListener('input',e=>$("#hex").value=e.target.value);
-  $("#add").addEventListener('click', ()=>{
-    const hex = ($("#hex").value||'').trim();
-    const who = ($("#who").value||'').trim();
-    const place = ($("#place").value||'').trim();
-    const dt = ($("#dt").value||'').trim() || new Date().toISOString().slice(0,16).replace('T',' ');
-    const pname = ($("#pname").value||'').trim();
-    const swatch = makeSwatch(hex);
-    add({hex, who, place, dt, pname, swatch});
-    alert('保存しました！（ローカル）');
+  $("#add").addEventListener('click',()=>{
+    const hex=($("#hex").value||'').trim();
+    const who=($("#who").value||'').trim();
+    const place=($("#place").value||'').trim();
+    const dt=($("#dt").value||'').trim() || new Date().toISOString().slice(0,16).replace('T',' ');
+    const pname=($("#pname").value||'').trim();
+    const swatch=makeSwatch(hex);
+    add({hex,who,place,dt,pname,swatch});
   });
-  $("#tbl").addEventListener('click', (e)=>{
-    const btn = e.target.closest('button[data-del]');
+
+  $("#tbl").addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-del]');
     if(btn){ del(parseInt(btn.dataset.del,10)); }
   });
-  $("#exportCsv").addEventListener('click', ()=>{
-    const arr = load();
-    const head = 'datetime,who,place,hex,pname,swatch_dataurl\n';
-    const body = arr.map(r=>[r.dt,r.who,r.place,r.hex,(r.pname||'').replace(/,/g,' '),r.swatch].join(',')).join('\n');
-    const blob = new Blob([head+body], {type:'text/csv'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='miin_color_log_v2.csv'; a.click();
+
+  $("#exportCsv").addEventListener('click',()=>{
+    const arr=load();
+    const head='datetime,who,place,hex,pname,swatch_dataurl\n';
+    const body=arr.map(r=>[r.dt,r.who,r.place,r.hex,(r.pname||'').replace(/,/g,' '),r.swatch].join(',')).join('\n');
+    const blob=new Blob([head+body],{type:'text/csv'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='miin_color_log_v2.csv';
+    a.click();
+    showToast('💾 CSVを書き出しました！');
   });
-  $("#exportJson").addEventListener('click', ()=>{
-    const arr = load();
-    const blob = new Blob([JSON.stringify(arr,null,2)], {type:'application/json'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='miin_color_log_v2.json'; a.click();
+
+  $("#exportJson").addEventListener('click',()=>{
+    const arr=load();
+    const blob=new Blob([JSON.stringify(arr,null,2)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='miin_color_log_v2.json';
+    a.click();
+    showToast('📤 JSONを書き出しました！');
   });
-  $("#importJson").addEventListener('change', (e)=>{
-    const f = e.target.files[0]; if(!f) return;
-    const rd = new FileReader();
-    rd.onload = ()=>{
-      try{ const data = JSON.parse(rd.result); if(Array.isArray(data)){ save(data); alert('JSONを読み込みました！'); } }
-      catch(err){ alert('JSONの読み込みに失敗しました。'); }
+
+  $("#importJson").addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const data=JSON.parse(rd.result);
+        if(Array.isArray(data)){ save(data); showToast('✅ JSONを読み込みました！'); }
+      }catch(err){ alert('JSONの読み込みに失敗しました。'); }
     };
     rd.readAsText(f);
   });
 
+  $("#addLogBtn").addEventListener('click',()=>showToast('🎨 新しい色を追加しました！'));
+  $("#exportBtn").addEventListener('click',()=>showToast('💾 CSVを書き出しました！'));
+
+  const ua=navigator.userAgent;
+  const isEdge=/Edg\//.test(ua);
+  const isChrome=/Chrome\//.test(ua)&&!isEdge;
+  const isSafari=/^((?!chrome|android).)*safari/i.test(ua);
+  let note=`Browser: ${isEdge?'Edge':isChrome?'Chrome':isSafari?'Safari':'Other'} ／ Storage: `;
+  let storageOK=true;
+  try{ localStorage.setItem('__chk','1'); localStorage.removeItem('__chk'); }catch(e){ storageOK=false }
+  note+=storageOK?'<span class="ok">OK</span>':'<span class="ng">NG</span>';
+  $("#env").innerHTML=note+'　<small class="small">（※iOSの「ファイルのプレビュー」経由ではNGのことがあります）</small>';
+
   render();
 })();
-  <!-- Toast Notification -->
-<div id="toast" class="toast">✅ 保存しました！</div>
-
-<script>
-  // トースト表示関数
-  function showToast(msg) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
-  }
-
-  // ダミーイベント
-  document.getElementById('addLogBtn').addEventListener('click', () => {
-    showToast('🎨 新しい色を追加しました！');
-  });
-  document.getElementById('exportBtn').addEventListener('click', () => {
-    showToast('💾 CSVを書き出しました！');
-  });
 </script>
 
 </body>
 </html>
+
